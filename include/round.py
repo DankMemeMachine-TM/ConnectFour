@@ -1,10 +1,13 @@
 '''
  round.py
-    The largest file for this game, this controls all of the main game logic.
+    The largest file for the game, this controls all of the main game logic.
 '''
 from include import glob as g
 from include import session as s
 from include import player as p
+
+SUCCESS = 0;
+FAILURE = 1;
 
 class Round:
     ############################
@@ -41,8 +44,8 @@ class Round:
             print("Looks like that input is invalid; please try entering a valid input.");
             self.input_handling();
     
+    # Currently, this doesn't give you a unique error message if a row/column is full.
     def take_action(self, player, column):
-        row_val: int = 0;
         if(column > 7 or column < 1):
             print("Position" , column, " is not a valid column. Please only enter a value from 1 to 7.");
             self.input_handling();
@@ -50,9 +53,12 @@ class Round:
             if (self.check_if_win(player) == True):
                 self.win_game(player);
             else:
-                self.change_current_player();
-                self.print_round();
-                self.input_handling();
+                if (self.check_if_board_full() == True):
+                    self.draw_game();
+                else:
+                    self.change_current_player();
+                    self.print_round();
+                    self.input_handling();
         else:
             print("Position ", column, " is invalid. Please try a different position.");
             self.input_handling();
@@ -79,11 +85,17 @@ class Round:
                 break;
         if(type(insertion) != int):
             self.board.reverse();
-            return 1;
+            return FAILURE;
         self.board[insertion][column] = g.PLAYER_ICON_MAP[player];
         self.board.reverse();
-        print("Placed marker into position ", insertion + 1, ",", column, ".");
-        return 0;
+        print("\nPlaced marker into row ", (6 - insertion), ", column", column + 1, ".");
+        return SUCCESS;
+
+    def check_if_board_full(self) -> bool:
+        for n in range(6):
+            if('-' in self.board[n]): # An occupied element exists, so board is not full
+                return False;
+        return True;
     
     def check_if_win(self, player) -> bool:
         marker = g.PLAYER_ICON_MAP[player];
@@ -95,6 +107,8 @@ class Round:
         return game_won;
     
     def win_check_vertical(self, marker) -> bool:
+        if(g.DEBUG_MODE):
+            print("vertical");
         temp = 0;
         for column in range(7):
             for row in range(6):
@@ -109,6 +123,8 @@ class Round:
         return False;
 
     def win_check_horizontal(self, marker) -> bool:
+        if(g.DEBUG_MODE):
+            print("horizontal");
         temp = 0;
         for row in range(6):
             for column in range(7):
@@ -122,17 +138,24 @@ class Round:
             temp = 0;
         return False;
 
+    # This function is kind of messy; I may try to see if I can refactor it to be a bit cleaner
     def win_check_diagonal(self, marker) -> bool:
+        if(g.DEBUG_MODE):
+            print("diagonal");
         temp: int = 0;
         for column in range(7):
             for row in range(6):
                 if(self.board[row][column] == marker):
-                    temp += 1;
+                    temp += 1; # Mark current
                     temp += self.diagonal_loop(marker, 1, 1, row, column);
+                    if (self.win_counter_check(temp)):
+                        return True;
+                    temp = 1; # Keep the initial one marked while we go the other way
                     temp += self.diagonal_loop(marker, -1, 1, row, column);
                     if (self.win_counter_check(temp)):
                         return True;
                     temp = 0;
+            temp = 0;
         return False;
 
     def diagonal_loop(self, marker, row_dir, column_dir, start_row, start_column):
@@ -155,22 +178,15 @@ class Round:
     # POSTGAME FUNCTIONS #
     ######################
     def win_game(self, player):
-        print("Player ", player, " wins!!");
-        s.increase_wins(player);
-        s.print_wins();
+        print("\nPlayer ", player, " (", self.player_names[player], ")  wins!!");
         self.print_board();
-        self.play_again_prompt();
-    
-    def play_again_prompt(self):
-        val = input("Play again? Y/n: ");
-        try:
-            val = str(val);
-            if(val == "Y" or val == "y"):
-                print("TODO: implement play again function");
-            elif(val == "N" or val == "n"):
-                return 0;
-        except:
-            print("That value is invalid. Please only enter Y or n (not case-sensitive): ");
+        return;
+
+    def draw_game(self):
+        print("DRAW GAME!!");
+        self.print_board();
+        self.current_player = g.DRAW_GAME;
+        return;
 
     ###################
     # PRINT FUNCTIONS #
@@ -186,11 +202,14 @@ class Round:
         print("\n");
     
     def print_current_turn(self, player):
-        print("It is ", self.player_names[player], "'s turn.");
+        print("\nIt is ", self.player_names[player], " (", g.PLAYER_ICON_MAP[player], ")'s turn.\n");
 
     # Prints the board... were you expecting something else?
     def print_board(self):
-        print("\n");
+        print("\n",end="      ");
+        for n in range(7):
+            print(n + 1,end="    ");
+        print(end="\n");
         for n in range(6):
-            print(self.board[n]);
+            print(n + 1, " ", self.board[n]);
         print("\n");

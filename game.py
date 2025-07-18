@@ -1,3 +1,7 @@
+'''
+ game.py
+    The program's entry point, this starts up the game.
+'''
 from include import glob as g
 from include import session as s
 from include import round as r
